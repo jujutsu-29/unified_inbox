@@ -1,67 +1,89 @@
-// // app/actions/create-contact.ts
-// "use server";
+// app/actions/create-contact.ts
+"use server";
 
-// import { z } from "zod";
-// import { prisma } from "@/lib/prisma";
-// import { auth } from "@/lib/auth";
-// import { headers } from "next/headers";
-// import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma"; // Use your prisma client
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 
-// // Schema to validate the form
-// const contactSchema = z.object({
-//   name: z.string().min(2, "Name is required"),
-//   phone: z.string().min(10, "A valid phone number is required"),
-// });
+const contactSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  phone: z.string().min(10, "A valid phone number is required"),
+});
 
-// export async function createContact(formData: FormData) {
-//   try {
-//     // 1. Get the authenticated user
-//     const session = await auth.api.getSession({ headers: await headers() });
-//     if (!session?.user?.id || !session.user.teamId) {
-//       // Assuming user has a teamId. Adjust as needed.
-//       return { success: false, error: "Not authenticated or no team found" };
-//     }
-//     const { teamId } = session.user;
+export async function createContact(formData: FormData) {
+  try {
+    // 1. Get the authenticated user
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user?.id) {
+      return { success: false, error: "Not authenticated" };
+    }
+    const userId = session.user.id;
 
-//     // 2. Validate the form data
-//     const validated = contactSchema.safeParse({
-//       name: formData.get("name"),
-//       phone: formData.get("phone"),
-//     });
+    // 2. Validate the form data
+    const validated = contactSchema.safeParse({
+      name: formData.get("name"),
+      phone: formData.get("phone"),
+    });
 
-//     if (!validated.success) {
-//       return { success: false, error: "Invalid input" };
-//     }
-//     const { name, phone } = validated.data;
+    if (!validated.success) {
+      return { success: false, error: "Invalid input" };
+    }
+    const { name, phone } = validated.data;
 
-//     // 3. Create the Contact AND the Conversation
-//     // We use a transaction to ensure both are created or neither are
-//     const newContact = await prisma.contact.create({
-//       data: {
-//         name: name,
-//         phone: phone, // Make sure this is in E.164 format, e.g., +919262348758
-//         teamId: teamId,
-//         // AND create the related conversation at the same time
-//         conversation: {
-//           create: {
-//             teamId: teamId,
-//             // You can assign it to the creator
-//             assigneeId: session.user.id, 
-//           },
-//         },
-//       },
-//     });
+    // 3. --- THIS IS THE NEW LOGIC ---
+    // Find the user and their teamId from the database
+    let user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { teamId: true, name: true } // Select only what we need
+    });
 
-//     // 4. Refresh the inbox page to show the new contact
-//     revalidatePath("/inbox");
-//     return { success: true, contact: newContact };
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+    
+    let currentTeamId = user.teamId;
 
-//   } catch (error: any) {
-//     // Handle specific error if phone number is already used in this team
-//     if (error.code === 'P2002') {
-//         return { success: false, error: "A contact with this phone number already exists." };
-//     }
-//     console.error("Failed to create contact:", error);
-//     return { success: false, error: "Failed to create contact" };
-//   }
-// }
+    // 4. If user has no team, create one for them!
+    if (!currentTeamId) {
+      const newTeam = await prisma.team.create({
+        data: {
+          name: `${user.name || 'My'}'s Team`,
+          // Add the user to this new team
+          users: {
+            connect: { id: userId }
+          }
+        }
+      });
+      currentTeamId = newTeam.id;
+    }
+    // --- END OF NEW LOGIC ---
+
+    // 5. Create the Contact AND the Conversation
+    const newContact = await prisma.contact.create({
+      data: {
+        name: name,
+        phone: phone, 
+        teamId: currentTeamId, // Use the new or existing team ID
+        conversation: {
+          create: {
+            teamId: currentTeamId,
+            assigneeId: userId, 
+          },
+        },
+      },
+    });
+
+    // 6. Refresh the inbox page
+    revalidatePath("/inbox"); // Or just "/"
+    return { success: true, contact: newContact };
+
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+        return { success: false, error: "A contact with this phone number already exists in your team." };
+    }
+    console.error("Failed to create contact:", error);
+    return { success: false, error: "Failed to create contact" };
+  }
+}

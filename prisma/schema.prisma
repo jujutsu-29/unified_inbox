@@ -17,12 +17,6 @@ model User {
   // Relation to a Team
   teamId String?
   team   Team?   @relation(fields: [teamId], references: [id])
-
-  // Relations for Better Auth (you will add Account, Session, etc.)
-  // accounts Account[]
-  // sessions Session[]
-
-  // Data this user has created
   sentMessages   Message[]
   createdNotes   Note[]
   assignedConvos Conversation[]

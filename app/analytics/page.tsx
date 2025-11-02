@@ -89,7 +89,7 @@ export default function Analytics() {
       error, //error object
       refetch //refetch the session
     } = authClient.useSession()
-    console.log("Session data:", session);
+    // console.log("Session data:", session);
   
     if (isPending) return <div>Loading...</div>;
     if (!session?.user) {

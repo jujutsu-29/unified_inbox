@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Phone, Clock, Send } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Search, Phone, Clock, Send, PlusCircle } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,52 +10,64 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { authClient } from "@/lib/auth-client"
-import { useRouter } from "next/navigation";    
+import { useRouter } from "next/navigation";
 import { sendMessage } from "../actions/send-message"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogClose,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { createContact } from "../actions/create-contact"
 
-const conversations = [
-    {
-        id: 1,
-        name: "Jane Doe",
-        phone: "+919262348758",
-        email: "jane.doe@example.com",
-        avatar: "JD",
-        channel: "SMS",
-        channelColor: "bg-green-100 text-green-800",
-        lastMessage: "Sounds great! Let me check my calendar.",
-        timestamp: "2:30 PM",
-    },
-    {
-        id: 2,
-        name: "John Smith",
-        phone: "+1 (555) 987-6543",
-        email: "john.smith@example.com",
-        avatar: "JS",
-        channel: "WhatsApp",
-        channelColor: "bg-blue-100 text-blue-800",
-        lastMessage: "Thanks for the update!",
-        timestamp: "1:15 PM",
-    },
-    {
-        id: 3,
-        name: "Sarah Johnson",
-        phone: "+1 (555) 456-7890",
-        email: "sarah.j@example.com",
-        avatar: "SJ",
-        channel: "Email",
-        channelColor: "bg-purple-100 text-purple-800",
-        lastMessage: "Looking forward to the meeting.",
-        timestamp: "12:45 PM",
-    },
-]
+// const conversations = [
+//     {
+//         id: 1,
+//         name: "Jane Doe",
+//         phone: "+919262348758",
+//         email: "jane.doe@example.com",
+//         avatar: "JD",
+//         channel: "SMS",
+//         channelColor: "bg-green-100 text-green-800",
+//         lastMessage: "Sounds great! Let me check my calendar.",
+//         timestamp: "2:30 PM",
+//     },
+//     {
+//         id: 2,
+//         name: "John Smith",
+//         phone: "+1 (555) 987-6543",
+//         email: "john.smith@example.com",
+//         avatar: "JS",
+//         channel: "WhatsApp",
+//         channelColor: "bg-blue-100 text-blue-800",
+//         lastMessage: "Thanks for the update!",
+//         timestamp: "1:15 PM",
+//     },
+//     {
+//         id: 3,
+//         name: "Sarah Johnson",
+//         phone: "+1 (555) 456-7890",
+//         email: "sarah.j@example.com",
+//         avatar: "SJ",
+//         channel: "Email",
+//         channelColor: "bg-purple-100 text-purple-800",
+//         lastMessage: "Looking forward to the meeting.",
+//         timestamp: "12:45 PM",
+//     },
+// ]
 
-const messages = [
-    { id: 1, sender: "Jane Doe", text: "Hi! How are you doing?", time: "2:20 PM", isOutbound: false },
-    { id: 2, sender: "You", text: "Hey Jane! I am doing well, thanks for asking.", time: "2:21 PM", isOutbound: true },
-    { id: 3, sender: "Jane Doe", text: "Great! Do you have time for a quick call?", time: "2:25 PM", isOutbound: false },
-    { id: 4, sender: "You", text: "Sure, I can do a call in 10 minutes.", time: "2:26 PM", isOutbound: true },
-    { id: 5, sender: "Jane Doe", text: "Sounds great! Let me check my calendar.", time: "2:30 PM", isOutbound: false },
-]
+// const messages = [
+//     { id: 1, sender: "Jane Doe", text: "Hi! How are you doing?", time: "2:20 PM", isOutbound: false },
+//     { id: 2, sender: "You", text: "Hey Jane! I am doing well, thanks for asking.", time: "2:21 PM", isOutbound: true },
+//     { id: 3, sender: "Jane Doe", text: "Great! Do you have time for a quick call?", time: "2:25 PM", isOutbound: false },
+//     { id: 4, sender: "You", text: "Sure, I can do a call in 10 minutes.", time: "2:26 PM", isOutbound: true },
+//     { id: 5, sender: "Jane Doe", text: "Sounds great! Let me check my calendar.", time: "2:30 PM", isOutbound: false },
+// ]
 
 const events = [
     { id: 1, action: "SMS sent", date: "Today at 2:30 PM" },
@@ -65,30 +77,94 @@ const events = [
 ]
 
 export default function InboxPage() {
-    const [selectedConversation, setSelectedConversation] = useState(conversations[0])
     const [searchTerm, setSearchTerm] = useState("")
     const [messageInput, setMessageInput] = useState("")
     const [notes, setNotes] = useState("")
     const [isPrivateNote, setIsPrivateNote] = useState(false)
     const router = useRouter();
-    const [isSending, setIsSending] = useState(false)
-
-    const filteredConversations = conversations.filter(
-        (conv) => conv.name.toLowerCase().includes(searchTerm.toLowerCase()) || conv.phone.includes(searchTerm),
-    )
+    const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [conversations, setConversations] = useState<any[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [selectedConversation, setSelectedConversation] = useState<any>(null);
+    const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+    const [refetchToggle, setRefetchToggle] = useState(false);
 
     const {
         data: session,
-        isPending, //loading state
-        error, //error object
-        refetch //refetch the session
-    } = authClient.useSession()
-    console.log("Session data:", session);
+        isPending, 
+        error, 
+        refetch 
+    } = authClient.useSession(); 
+
+    useEffect(() => {
+        // This is an async function inside the hook
+        const fetchConversations = async () => {
+            setIsLoadingConversations(true);
+            try {
+                const res = await fetch("/api/conversations");
+                const data = await res.json();
+                setConversations(data);
+                console.log("Fetched conversations:", data);
+                // Automatically select the first conversation
+                if (data.length > 0 && !selectedConversation) {
+                    setSelectedConversation(data[0]);
+                }
+            } catch (err) {
+                console.error("Failed to fetch conversations:", err);
+            }
+            setIsLoadingConversations(false);
+        };
+
+        if (session?.user) { // Only fetch if logged in
+            fetchConversations();
+        }
+    }, [session, refetchToggle]); // --- Refetches if auth changes or if we toggle it
+
+    // --- NEW: Fetch messages when a conversation is selected ---
+    useEffect(() => {
+        const fetchMessages = async () => {
+            if (!selectedConversation) return; // Don't fetch if nothing is selected
+
+            setIsLoadingMessages(true);
+            try {
+                const res = await fetch(
+                    `/api/conversations/${selectedConversation.id}/messages`
+                );
+                const data = await res.json();
+                console.log("Fetched messages for conversation", selectedConversation.id, data);
+                setMessages(data);
+            } catch (err) {
+                console.error("Failed to fetch messages:", err);
+            }
+            setIsLoadingMessages(false);
+        };
+
+        fetchMessages();
+    }, [selectedConversation, refetchToggle]);
 
     if (isPending) return <div>Loading...</div>;
     if (!session?.user) {
         router.push("/login");
         return null;
+    }
+    
+    const handleCreateContact = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        console.log("Creating contact with data:", Object.fromEntries(formData.entries()));
+        const res = await createContact(formData);
+        console.log("Create contact result:", res);
+        setIsDialogOpen(false);
+    }
+
+    const filteredConversations = conversations.filter(
+        (conv) => conv.name.toLowerCase().includes(searchTerm.toLowerCase()) || conv.phone.includes(searchTerm),
+    )
+
+    const handleCallEvent = () => {
+        console.log("Handle call event for conversation:", selectedConversation)
     }
 
     const handleSend = async () => {
@@ -110,8 +186,8 @@ export default function InboxPage() {
         try {
             // 2. Call the server action
             const result = await sendMessage(formData)
-            
-            console.log("Send message result:", result) 
+
+            console.log("Send message result:", result)
             if (result.success) {
                 // 3. Clear the input and stop loading
                 setMessageInput("")
@@ -149,6 +225,42 @@ export default function InboxPage() {
             <div className="flex flex-1 overflow-hidden">
                 {/* Left Panel: Conversation List */}
                 <div className="w-80 border-r bg-card flex flex-col">
+                    <div className="p-4 border-b">
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" className="w-full justify-start gap-2" size="sm">
+                                    <PlusCircle className="h-4 w-4" />
+                                    New Chat
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Create New Contact</DialogTitle>
+                                    <DialogDescription>
+                                        Enter the contact's name and phone number to start a new conversation.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleCreateContact} className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="name">Name</Label>
+                                        <Input id="name" name="name" placeholder="Jane Doe" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="phone">Phone Number</Label>
+                                        <Input id="phone" name="phone" placeholder="+15551234567" />
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button type="button" variant="outline">
+                                                Cancel
+                                            </Button>
+                                        </DialogClose>
+                                        <Button type="submit">Create Contact</Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                     <div className="p-4 border-b">
                         <div className="relative">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -192,10 +304,10 @@ export default function InboxPage() {
                     <Card className="m-4 p-4 border rounded-lg shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="font-semibold text-foreground">{selectedConversation.name}</h2>
-                                <p className="text-sm text-muted-foreground">{selectedConversation.phone}</p>
+                                <h2 className="font-semibold text-foreground">{selectedConversation?.name}</h2>
+                                <p className="text-sm text-muted-foreground">{selectedConversation?.phone}</p>
                             </div>
-                            <Button size="sm" variant="outline" className="gap-2 bg-transparent">
+                            <Button onClick={handleCallEvent} size="sm" variant="outline" className="gap-2 bg-transparent">
                                 <Phone className="h-4 w-4" />
                                 Call
                             </Button>
@@ -250,7 +362,7 @@ export default function InboxPage() {
                             <div className="flex justify-between gap-2">
                                 <Button size="sm" variant="outline" className="gap-2 bg-transparent">
                                     <Clock className="h-4 w-4" />
-                                        Schedule
+                                    Schedule
                                 </Button>
                                 <Button
                                     size="sm"
@@ -284,23 +396,23 @@ export default function InboxPage() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-xs font-medium text-muted-foreground mb-2 block">Name</label>
-                                    <Input value={selectedConversation.name} readOnly className="text-sm" />
+                                    <Input value={selectedConversation?.name} readOnly className="text-sm" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-medium text-muted-foreground mb-2 block">Phone</label>
-                                    <Input value={selectedConversation.phone} readOnly className="text-sm" />
+                                    <Input value={selectedConversation?.phone} readOnly className="text-sm" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-medium text-muted-foreground mb-2 block">Email</label>
-                                    <Input value={selectedConversation.email} readOnly className="text-sm" />
+                                    <Input value={selectedConversation?.email} readOnly className="text-sm" />
                                 </div>
                             </div>
 
                             {/* Tabs */}
                             <Tabs defaultValue="notes" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2">
+                                <TabsList className="grid w-full">
                                     <TabsTrigger value="notes">Notes</TabsTrigger>
-                                    <TabsTrigger value="history">History</TabsTrigger>
+                                    {/* <TabsTrigger value="history">History</TabsTrigger> */}
                                 </TabsList>
 
                                 {/* Notes Tab */}
@@ -329,7 +441,7 @@ export default function InboxPage() {
                                 </TabsContent>
 
                                 {/* History Tab */}
-                                <TabsContent value="history" className="space-y-3 mt-4">
+                                {/* <TabsContent value="history" className="space-y-3 mt-4">
                                     <div className="space-y-2">
                                         {events.map((event) => (
                                             <div key={event.id} className="flex gap-3 pb-3 border-b last:border-b-0">
@@ -341,7 +453,7 @@ export default function InboxPage() {
                                             </div>
                                         ))}
                                     </div>
-                                </TabsContent>
+                                </TabsContent> */}
                             </Tabs>
                         </div>
                     </Card>
