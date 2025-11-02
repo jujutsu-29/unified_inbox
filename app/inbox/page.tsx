@@ -187,13 +187,37 @@ export default function InboxPage() {
         console.log("To conversation:", selectedConversation)
 
         // 1. Create FormData to send to the action
-        const formData = new FormData()
-        formData.append("body", messageInput)
-        // NOTE: Your hardcoded data needs to be replaced by real data
-        // The server action needs the CONTACT's phone and the CONVERSATION's ID
-        formData.append("contactPhone", selectedConversation.phone)
-        formData.append("conversationId", String(selectedConversation.id))
+        // const formData = new FormData()
+        // formData.append("body", messageInput)
+        // // NOTE: Your hardcoded data needs to be replaced by real data
+        // // The server action needs the CONTACT's phone and the CONVERSATION's ID
+        // formData.append("contactPhone", selectedConversation.phone)
+        // formData.append("conversationId", String(selectedConversation.id))
 
+        const optimisticMessage = {
+            id: `temp_${Date.now()}`, // A temporary ID for React's key
+            text: messageInput,
+            time: new Date().toLocaleTimeString(),
+            isOutbound: true,
+            sender: "You",
+            status: scheduledAt ? 'QUEUED' : 'SENT', // Set the status
+            scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
+        };
+
+        setMessages(currentMessages => [...currentMessages, optimisticMessage]);
+
+        const messageBody = messageInput;
+        const conversationId = String(selectedConversation.id);
+        const contactPhone = selectedConversation.phone;
+        const scheduleDate = scheduledAt;
+
+        setMessageInput("");
+        setScheduledAt(null);
+
+        const formData = new FormData();
+        formData.append("body", messageBody);
+        formData.append("contactPhone", contactPhone);
+        formData.append("conversationId", conversationId);
         try {
             if (scheduledAt) {
                 formData.append("scheduledAt", scheduledAt.toISOString());
@@ -203,7 +227,7 @@ export default function InboxPage() {
             } else {
                 const result = await sendMessage(formData)
 
-                console.log("Send message result:", result)
+                // console.log("Send message result:", result)
                 if (result.success) {
                     setMessageInput("")
                 } else {
@@ -343,10 +367,10 @@ export default function InboxPage() {
                                 <h2 className="font-semibold text-foreground">{selectedConversation?.name}</h2>
                                 <p className="text-sm text-muted-foreground">{selectedConversation?.phone}</p>
                             </div>
-                            <Button onClick={handleCallEvent} size="sm" variant="outline" className="gap-2 bg-transparent">
+                            {/* <Button onClick={handleCallEvent} size="sm" variant="outline" className="gap-2 bg-transparent">
                                 <Phone className="h-4 w-4" />
                                 Call
-                            </Button>
+                            </Button> */}
                         </div>
                     </Card>
 
@@ -449,14 +473,14 @@ export default function InboxPage() {
                                     onClick={handleSend}
                                     disabled={isSending || !messageInput}
                                 >
-                                    {isSending ? (
+                                    {/* {isSending ? (
                                         "Sending..."
-                                    ) : (
+                                    ) : ( */}
                                         <>
                                             <Send className="h-4 w-4" />
                                             Send
                                         </>
-                                    )}
+                                    {/* )} */}
                                 </Button>
                             </div>
                         </div>
