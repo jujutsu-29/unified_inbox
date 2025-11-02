@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") 
+}
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+  name  String?
+  role  Role   @default(VIEWER) // For role-based access
+
+  // Relation to a Team
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  // Relations for Better Auth (you will add Account, Session, etc.)
+  // accounts Account[]
+  // sessions Session[]
+
+  // Data this user has created
+  sentMessages   Message[] 
+  createdNotes   Note[]   
+  assignedConvos Conversation[] 
+
+  @@index([teamId])
+}
+
+model Team {
+  id   String @id @default(cuid())
+  name String
+  users User[]
+  contacts      Contact[]
+  conversations Conversation[]
+}
+
+model Contact {
+  id            String  @id @default(cuid())
+  name          String?
+  phone         String?
+  email         String? 
+  socialHandles Json?   
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+  conversation Conversation?
+  notes Note[]
+
+  @@unique([teamId, phone]) 
+  @@index([teamId])
+}
+
+model Conversation {
+  id     String             @id @default(cuid())
+  status ConversationStatus @default(OPEN)
+  contactId String  @unique 
+  contact   Contact @relation(fields: [contactId], references: [id])
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+  assigneeId String?
+  assignee   User?   @relation(fields: [assigneeId], references: [id])
+  messages Message[]
+
+  @@index([teamId])
+  @@index([assigneeId])
+}
+
+model Message {
+  id      String @id @default(cuid())
+  content String
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  channel Channel
+  direction MessageDirection
+  status MessageStatus @default(SENT)
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id])
+  createdAt   DateTime  @default(now())
+  scheduledAt DateTime? 
+  externalSid String? @unique
+  attachments Json?
+
+  @@index([conversationId])
+  @@index([status, scheduledAt]) 
+}
+
+
+model Note {
+  id      String @id @default(cuid())
+  content String
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id])
+  visibility NoteVisibility @default(TEAM)
+
+  createdAt DateTime @default(now())
+
+  @@index([contactId])
+  @@index([authorId])
+}
+
+enum Role {
+  ADMIN  
+  EDITOR 
+  VIEWER 
+}
+
+enum Channel {
+  SMS
+  WHATSAPP
+  EMAIL
+  TWITTER_DM
+  FACEBOOK_MESSENGER
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  QUEUED  
+  SENT      
+  DELIVERED 
+  READ   
+  FAILED    
+}
+
+enum ConversationStatus {
+  UNREAD
+  OPEN
+  CLOSED
+}
+
+enum NoteVisibility {
+  TEAM    
+  PRIVATE 
+}

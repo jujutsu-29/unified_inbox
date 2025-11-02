@@ -120,7 +120,7 @@ export default function InboxPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-semibold text-foreground text-sm">{conv.name}</p>
-                      <Badge className={`${conv.channelColor} text-xs flex-shrink-0`}>{conv.channel}</Badge>
+                      <Badge className={`${conv.channelColor} text-xs shrink-0`}>{conv.channel}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{conv.phone}</p>
                     <p className="text-xs text-muted-foreground truncate mt-2">{conv.lastMessage}</p>
@@ -247,7 +247,7 @@ export default function InboxPage() {
                   <div className="space-y-2">
                     {events.map((event) => (
                       <div key={event.id} className="flex gap-3 pb-3 border-b last:border-b-0">
-                        <div className="h-2 w-2 rounded-full bg-primary mt-1 flex-shrink-0" />
+                        <div className="h-2 w-2 rounded-full bg-primary mt-1 shrink-0" />
                         <div>
                           <p className="text-sm text-foreground">{event.action}</p>
                           <p className="text-xs text-muted-foreground">{event.date}</p>
