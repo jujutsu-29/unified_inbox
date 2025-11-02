@@ -37,6 +37,14 @@ export async function sendMessage(formData: FormData) {
             throw new Error("Unauthorized");
         }
 
+        if (!session?.user?.id) {
+            return { success: false, error: "Not authenticated" };
+        }
+        
+        if (session.user.role === 'VIEWER') {
+            return { success: false, error: "Not authorized to send messages" };
+        }
+
         const authorId = session.user.id;
         const validated = messageSchema.safeParse({
             body: formData.get("body"),

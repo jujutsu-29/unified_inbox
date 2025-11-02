@@ -162,6 +162,8 @@ function InboxComponent() {
         return null;
     }
 
+    const isViewer = session.user.role === 'VIEWER';
+
     const handleCreateContact = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -179,12 +181,12 @@ function InboxComponent() {
     useEventListener(({ event }) => {
         console.log("Liveblocks: Received event", event);
 
-  
+
         if (
-            event && 
+            event &&
             typeof event === "object" &&
-            "type" in event && 
-            event.type === "refetch-data"   
+            "type" in event &&
+            event.type === "refetch-data"
         ) {
             console.log("Liveblocks: 'refetch-data' event triggered! Refetching...");
             setRefetchToggle(prev => !prev);
@@ -286,40 +288,41 @@ function InboxComponent() {
                 {/* Left Panel: Conversation List */}
                 <div className="w-80 border-r bg-card flex flex-col">
                     <div className="p-4 border-b">
-                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" className="w-full justify-start gap-2" size="sm">
-                                    <PlusCircle className="h-4 w-4" />
-                                    New Chat
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Create New Contact</DialogTitle>
-                                    <DialogDescription>
-                                        Enter the contact's name and phone number to start a new conversation.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleCreateContact} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="name">Name</Label>
-                                        <Input id="name" name="name" placeholder="Jane Doe" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="phone">Phone Number</Label>
-                                        <Input id="phone" name="phone" placeholder="+15551234567" />
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button type="button" variant="outline">
-                                                Cancel
-                                            </Button>
-                                        </DialogClose>
-                                        <Button type="submit">Create Contact</Button>
-                                    </DialogFooter>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        {!isViewer &&
+                            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" className="w-full justify-start gap-2" size="sm">
+                                        <PlusCircle className="h-4 w-4" />
+                                        New Chat
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create New Contact</DialogTitle>
+                                        <DialogDescription>
+                                            Enter the contact's name and phone number to start a new conversation.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleCreateContact} className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="name">Name</Label>
+                                            <Input id="name" name="name" placeholder="Jane Doe" />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="phone">Phone Number</Label>
+                                            <Input id="phone" name="phone" placeholder="+15551234567" />
+                                        </div>
+                                        <DialogFooter>
+                                            <DialogClose asChild>
+                                                <Button type="button" variant="outline">
+                                                    Cancel
+                                                </Button>
+                                            </DialogClose>
+                                            <Button type="submit">Create Contact</Button>
+                                        </DialogFooter>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>}
                     </div>
                     <div className="p-4 border-b">
                         <div className="relative">
@@ -367,10 +370,6 @@ function InboxComponent() {
                                 <h2 className="font-semibold text-foreground">{selectedConversation?.name}</h2>
                                 <p className="text-sm text-muted-foreground">{selectedConversation?.phone}</p>
                             </div>
-                            {/* <Button onClick={handleCallEvent} size="sm" variant="outline" className="gap-2 bg-transparent">
-                                <Phone className="h-4 w-4" />
-                                Call
-                            </Button> */}
                         </div>
                     </Card>
 
@@ -409,82 +408,83 @@ function InboxComponent() {
                     </div>
 
                     {/* Message Composer */}
-                    <Card className="m-4 p-4 border rounded-lg shadow-sm">
-                        <div className="space-y-3">
-                            <Textarea
-                                placeholder="Write your message here..."
-                                className="min-h-20 resize-none"
-                                value={messageInput}
-                                onChange={(e) => setMessageInput(e.target.value)}
-                                disabled={isSending} // --- NEW
-                            />
-                            <div className="flex justify-between gap-2">
+                    {!isViewer &&
+                        <Card className="m-4 p-4 border rounded-lg shadow-sm">
+                            <div className="space-y-3">
+                                <Textarea
+                                    placeholder="Write your message here..."
+                                    className="min-h-20 resize-none"
+                                    value={messageInput}
+                                    onChange={(e) => setMessageInput(e.target.value)}
+                                    disabled={isSending} // --- NEW
+                                />
+                                <div className="flex justify-between gap-2">
 
-                                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="gap-2 bg-transparent"
-                                        >
-                                            <Clock className="h-4 w-4" />
-                                            {/* Show the selected date, or "Schedule" */}
-                                            {scheduledAt ? (
-                                                format(scheduledAt, "MMM d, p")
-                                            ) : (
-                                                "Schedule"
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={scheduledAt || undefined}
-                                            onSelect={(newDate) => {
-                                                if (newDate) {
-                                                    const [hours, minutes] = time.split(":").map(Number);
-                                                    const combinedDateTime = new Date(newDate);
-                                                    combinedDateTime.setHours(hours, minutes);
-                                                    setScheduledAt(combinedDateTime);
-                                                } else {
-                                                    setScheduledAt(null);
-                                                }
-                                                setIsPopoverOpen(false); // Close popover on select
-                                            }}
-                                            disabled={(date) => date < new Date(Date.now() - 86400000)} // Disable past dates
-                                            initialFocus
-                                        />
-                                        <div className="p-2 border-t border-border">
-                                            <Label htmlFor="time" className="text-sm font-medium">Time</Label>
-                                            <Input
-                                                id="time"
-                                                type="time"
-                                                value={time}
-                                                onChange={(e) => setTime(e.target.value)}
+                                    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="gap-2 bg-transparent"
+                                            >
+                                                <Clock className="h-4 w-4" />
+                                                {/* Show the selected date, or "Schedule" */}
+                                                {scheduledAt ? (
+                                                    format(scheduledAt, "MMM d, p")
+                                                ) : (
+                                                    "Schedule"
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={scheduledAt || undefined}
+                                                onSelect={(newDate) => {
+                                                    if (newDate) {
+                                                        const [hours, minutes] = time.split(":").map(Number);
+                                                        const combinedDateTime = new Date(newDate);
+                                                        combinedDateTime.setHours(hours, minutes);
+                                                        setScheduledAt(combinedDateTime);
+                                                    } else {
+                                                        setScheduledAt(null);
+                                                    }
+                                                    setIsPopoverOpen(false); // Close popover on select
+                                                }}
+                                                disabled={(date) => date < new Date(Date.now() - 86400000)} // Disable past dates
+                                                initialFocus
                                             />
-                                        </div>
-                                        {/* Optional: Add a Time Picker component here */}
-                                    </PopoverContent>
-                                </Popover>
+                                            <div className="p-2 border-t border-border">
+                                                <Label htmlFor="time" className="text-sm font-medium">Time</Label>
+                                                <Input
+                                                    id="time"
+                                                    type="time"
+                                                    value={time}
+                                                    onChange={(e) => setTime(e.target.value)}
+                                                />
+                                            </div>
+                                            {/* Optional: Add a Time Picker component here */}
+                                        </PopoverContent>
+                                    </Popover>
 
-                                <Button
-                                    size="sm"
-                                    className="gap-2"
-                                    onClick={handleSend}
-                                    disabled={isSending || !messageInput}
-                                >
-                                    {/* {isSending ? (
+                                    <Button
+                                        size="sm"
+                                        className="gap-2"
+                                        onClick={handleSend}
+                                        disabled={isSending || !messageInput}
+                                    >
+                                        {/* {isSending ? (
                                         "Sending..."
                                     ) : ( */}
-                                    <>
-                                        <Send className="h-4 w-4" />
-                                        Send
-                                    </>
-                                    {/* )} */}
-                                </Button>
+                                        <>
+                                            <Send className="h-4 w-4" />
+                                            Send
+                                        </>
+                                        {/* )} */}
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    </Card>
+                        </Card>}
                 </div>
 
                 {/* Right Panel: Contact Profile */}

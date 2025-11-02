@@ -1,8 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "@prisma/client";
 import { prisma } from "./prisma";
 import { nextCookies } from "better-auth/next-js";
+import { customSession } from "better-auth/plugins";
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
@@ -16,15 +16,39 @@ export const auth = betterAuth({
             prompt: "select_account consent",
         },
     },
-    plugins: [nextCookies()],
+    plugins: [nextCookies(),
+    customSession(async ({ user, session }) => {
+        if (!user) {
+            return { user, session };
+        }
+        const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { teamId: true, role: true },
+        });
+        return {
+            session,
+            user: {
+                ...user,
+                teamId: dbUser?.teamId || null,
+                role: dbUser?.role || "VIEWER",
+            },
+        };
+    }),
+    ],
     user: {
         additionalFields: {
             teamId: {
                 type: "string",
                 required: false,
                 defaultValue: null,
-                input: false // if you don’t want user to set it manually
-            }
+                input: false  
+            },
+            role: {
+                type: "string",
+                required: false,
+                defaultValue: "VIEWER",  
+                input: false,
+            },
         }
     },
 });

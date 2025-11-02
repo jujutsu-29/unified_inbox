@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 
 export async function GET(
   req: NextRequest,
-  context: { params: { contactId: string } }
+  context: { params: Promise<{ contactId: string }> }
 ) {
   try {
     // 1. Authenticate the user
@@ -20,7 +20,7 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 403 });
     }
 
-    const { contactId } = context.params;
+    const { contactId } = await context.params;
 
     // 2. Fetch notes, with security check
     const notes = await prisma.note.findMany({
