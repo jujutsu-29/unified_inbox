@@ -96,7 +96,7 @@ export default function InboxPage() {
         <div className="max-w-[1600px] mx-auto">
           <h1 className="text-2xl font-bold text-foreground">Communications</h1>
           <nav className="flex gap-6 mt-4 text-sm">
-            <a href="/" className="text-primary font-medium">
+            <a href="/inbox" className="text-primary font-medium">
               Inbox
             </a>
             <a href="/analytics" className="text-muted-foreground hover:text-foreground">

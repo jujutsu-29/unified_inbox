@@ -17,4 +17,14 @@ export const auth = betterAuth({
         },
     },
     plugins: [nextCookies()],
+    user: {
+        additionalFields: {
+            teamId: {
+                type: "string",
+                required: false,
+                defaultValue: null,
+                input: false // if you don’t want user to set it manually
+            }
+        }
+    },
 });

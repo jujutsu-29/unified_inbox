@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { RoomProvider, useBroadcastEvent, useEventListener, ClientSideSuspense } from "@liveblocks/react";
 
 // const conversations = [
 //     {
@@ -84,7 +85,7 @@ const events = [
     { id: 4, action: "Contact added", date: "Nov 1, 2024" },
 ]
 
-export default function InboxPage() {
+function InboxComponent() {
     const [searchTerm, setSearchTerm] = useState("")
     const [messageInput, setMessageInput] = useState("")
     const [notes, setNotes] = useState("")
@@ -117,7 +118,7 @@ export default function InboxPage() {
                 const res = await fetch("/api/conversations");
                 const data = await res.json();
                 setConversations(data);
-                console.log("Fetched conversations:", data);
+                // console.log("Fetched conversations:", data);
                 // Automatically select the first conversation
                 if (data.length > 0 && !selectedConversation) {
                     setSelectedConversation(data[0]);
@@ -144,7 +145,7 @@ export default function InboxPage() {
                     `/api/conversations/${selectedConversation.id}/messages`
                 );
                 const data = await res.json();
-                console.log("Fetched messages for conversation", selectedConversation.id, data);
+                // console.log("Fetched messages for conversation", selectedConversation.id, data);
                 setMessages(data);
             } catch (err) {
                 console.error("Failed to fetch messages:", err);
@@ -168,15 +169,27 @@ export default function InboxPage() {
         const res = await createContact(formData);
         console.log("Create contact result:", res);
         setIsDialogOpen(false);
+        setRefetchToggle(prev => !prev);
     }
 
     const filteredConversations = conversations.filter(
         (conv) => conv.name.toLowerCase().includes(searchTerm.toLowerCase()) || conv.phone.includes(searchTerm),
     )
 
-    const handleCallEvent = () => {
-        console.log("Handle call event for conversation:", selectedConversation)
-    }
+    useEventListener(({ event }) => {
+        console.log("Liveblocks: Received event", event);
+
+  
+        if (
+            event && 
+            typeof event === "object" &&
+            "type" in event && 
+            event.type === "refetch-data"   
+        ) {
+            console.log("Liveblocks: 'refetch-data' event triggered! Refetching...");
+            setRefetchToggle(prev => !prev);
+        }
+    });
 
     const handleSend = async () => {
         console.log("Handle send called")
@@ -235,6 +248,7 @@ export default function InboxPage() {
                     // TODO: Show an error toast to the user
                 }
             }
+            setRefetchToggle(prev => !prev);
         } catch (err) {
             console.error(err)
             // TODO: Show an error toast
@@ -266,21 +280,7 @@ export default function InboxPage() {
 
     return (
         <div className="flex flex-col h-screen bg-background">
-            {/* Header Navigation */}
-            <header className="border-b bg-card px-6 py-4">
-                <div className="max-w-[1600px] mx-auto">
-                    <h1 className="text-2xl font-bold text-foreground">Communications</h1>
-                    <nav className="flex gap-6 mt-4 text-sm">
-                        <a href="/" className="text-primary font-medium">
-                            Inbox
-                        </a>
-                        <a href="/analytics" className="text-muted-foreground hover:text-foreground">
-                            Analytics
-                        </a>
-                    </nav>
-                </div>
-            </header>
-
+            <Navbar />
             {/* Main 3-Panel Layout */}
             <div className="flex flex-1 overflow-hidden">
                 {/* Left Panel: Conversation List */}
@@ -389,17 +389,17 @@ export default function InboxPage() {
                                 >
                                     {msg.status === 'QUEUED' && msg.scheduledAt ? (
                                         <>
-                                        <p className="text-sm">{msg.text}</p>
-                                        <p className="text-xs mt-1 opacity-70 flex items-center gap-1">
-                                            <Clock className="h-3 w-3" />
-                                            Scheduled for {format(new Date(msg.scheduledAt), "MMM d, p")}
-                                        </p>
+                                            <p className="text-sm">{msg.text}</p>
+                                            <p className="text-xs mt-1 opacity-70 flex items-center gap-1">
+                                                <Clock className="h-3 w-3" />
+                                                Scheduled for {format(new Date(msg.scheduledAt), "MMM d, p")}
+                                            </p>
                                         </>
                                     ) : (
                                         <>
-                                        <p className="text-sm">{msg.text}</p>
-                                        {/* // This is the original "time" tag */}
-                                        <p className="text-xs mt-1 opacity-70">{msg.time}</p>
+                                            <p className="text-sm">{msg.text}</p>
+                                            {/* // This is the original "time" tag */}
+                                            <p className="text-xs mt-1 opacity-70">{msg.time}</p>
                                         </>
                                     )}
                                     {/* <p className="text-xs mt-1 opacity-70">{msg.time}</p> */}
@@ -476,10 +476,10 @@ export default function InboxPage() {
                                     {/* {isSending ? (
                                         "Sending..."
                                     ) : ( */}
-                                        <>
-                                            <Send className="h-4 w-4" />
-                                            Send
-                                        </>
+                                    <>
+                                        <Send className="h-4 w-4" />
+                                        Send
+                                    </>
                                     {/* )} */}
                                 </Button>
                             </div>
@@ -542,21 +542,6 @@ export default function InboxPage() {
                                         Save Note
                                     </Button>
                                 </TabsContent>
-
-                                {/* History Tab */}
-                                {/* <TabsContent value="history" className="space-y-3 mt-4">
-                                    <div className="space-y-2">
-                                        {events.map((event) => (
-                                            <div key={event.id} className="flex gap-3 pb-3 border-b last:border-b-0">
-                                                <div className="h-2 w-2 rounded-full bg-primary mt-1 shrink-0" />
-                                                <div>
-                                                    <p className="text-sm text-foreground">{event.action}</p>
-                                                    <p className="text-xs text-muted-foreground">{event.date}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </TabsContent> */}
                             </Tabs>
                         </div>
                     </Card>
@@ -564,4 +549,30 @@ export default function InboxPage() {
             </div>
         </div>
     )
+}
+
+
+import { Navbar } from "@/components/Navbar";
+
+export default function InboxPage() {
+    const {
+        data: session,
+        isPending,
+        error,
+        refetch
+    } = authClient.useSession();
+
+    if (isPending) {
+        return <div>Loading session...</div>;
+    }
+
+    if (!session?.user?.teamId) {
+        return <div>Loading team... (If this persists, try logging out and back in)</div>
+    }
+
+    return (
+        <RoomProvider id={session.user.teamId} initialPresence={{}}>
+            <InboxComponent />
+        </RoomProvider>
+    );
 }

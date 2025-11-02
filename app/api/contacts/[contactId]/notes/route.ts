@@ -1,13 +1,13 @@
 // app/api/contacts/[contactId]/notes/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { contactId: string } }
+  req: NextRequest,
+  context: { params: { contactId: string } }
 ) {
   try {
     // 1. Authenticate the user
@@ -20,10 +20,12 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 403 });
     }
 
+    const { contactId } = context.params;
+
     // 2. Fetch notes, with security check
     const notes = await prisma.note.findMany({
       where: {
-        contactId: params.contactId,
+        contactId: contactId,
         contact: {
           teamId: user.teamId,
         },

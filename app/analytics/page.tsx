@@ -105,7 +105,7 @@ export default function Analytics() {
             <h1 className="text-2xl font-bold text-primary">Communications</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/">
+            <Link href="/inbox">
               <Button
                 variant={activeNav === "inbox" ? "default" : "ghost"}
                 onClick={() => setActiveNav("inbox")}
