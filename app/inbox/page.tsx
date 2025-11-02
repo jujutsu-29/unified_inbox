@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Search, Phone, Clock, Send, PlusCircle } from "lucide-react"
+import { Search, Phone, Clock, Send, PlusCircle, Calendar as CalendarIcon } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,14 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { createContact } from "../actions/create-contact"
+import { scheduleMessage } from "../actions/schedule-message"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 // const conversations = [
 //     {
@@ -90,13 +98,16 @@ export default function InboxPage() {
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [refetchToggle, setRefetchToggle] = useState(false);
+    const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [time, setTime] = useState("12:00");
 
     const {
         data: session,
-        isPending, 
-        error, 
-        refetch 
-    } = authClient.useSession(); 
+        isPending,
+        error,
+        refetch
+    } = authClient.useSession();
 
     useEffect(() => {
         // This is an async function inside the hook
@@ -149,7 +160,7 @@ export default function InboxPage() {
         router.push("/login");
         return null;
     }
-    
+
     const handleCreateContact = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -184,17 +195,21 @@ export default function InboxPage() {
         formData.append("conversationId", String(selectedConversation.id))
 
         try {
-            // 2. Call the server action
-            const result = await sendMessage(formData)
+            if (scheduledAt) {
+                formData.append("scheduledAt", scheduledAt.toISOString());
 
-            console.log("Send message result:", result)
-            if (result.success) {
-                // 3. Clear the input and stop loading
-                setMessageInput("")
-                // revalidatePath() in the action will refresh the messages
+                await scheduleMessage(formData);
+                setScheduledAt(null);
             } else {
-                console.error(result.error)
-                // TODO: Show an error toast to the user
+                const result = await sendMessage(formData)
+
+                console.log("Send message result:", result)
+                if (result.success) {
+                    setMessageInput("")
+                } else {
+                    console.error(result.error)
+                    // TODO: Show an error toast to the user
+                }
             }
         } catch (err) {
             console.error(err)
@@ -203,6 +218,27 @@ export default function InboxPage() {
 
         setIsSending(false)
     }
+
+    const handleSchedule = async () => {
+        if (!messageInput || !selectedConversation || !scheduledAt) return;
+
+        const [hours, minutes] = time.split(":").map(Number);
+        const scheduledDateTime = new Date(scheduledAt);
+        scheduledDateTime.setHours(hours, minutes);
+
+        const formData = new FormData();
+        formData.append("body", messageInput);
+        formData.append("conversationId", String(selectedConversation.id));
+        formData.append("scheduledAt", scheduledDateTime.toISOString());
+
+        try {
+            await scheduleMessage(formData);
+            setScheduledAt(null);
+            setMessageInput("");
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -319,37 +355,36 @@ export default function InboxPage() {
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex ${msg.isOutbound ? "justify-end" : "justify-start"}`}>
                                 <div
+                                    // className={`max-w-xs px-4 py-2 rounded-lg ${msg.isOutbound ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                                    //     }`}
                                     className={`max-w-xs px-4 py-2 rounded-lg ${msg.isOutbound ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                                        } ${
+                                        // --- NEW: Make scheduled messages look "faded" ---
+                                        msg.status === 'QUEUED' ? 'opacity-60' : ''
                                         }`}
                                 >
-                                    <p className="text-sm">{msg.text}</p>
-                                    <p className="text-xs mt-1 opacity-70">{msg.time}</p>
+                                    {msg.status === 'QUEUED' && msg.scheduledAt ? (
+                                        <>
+                                        <p className="text-sm">{msg.text}</p>
+                                        <p className="text-xs mt-1 opacity-70 flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            Scheduled for {format(new Date(msg.scheduledAt), "MMM d, p")}
+                                        </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                        <p className="text-sm">{msg.text}</p>
+                                        {/* // This is the original "time" tag */}
+                                        <p className="text-xs mt-1 opacity-70">{msg.time}</p>
+                                        </>
+                                    )}
+                                    {/* <p className="text-xs mt-1 opacity-70">{msg.time}</p> */}
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* Message Composer */}
-                    {/* <Card className="m-4 p-4 border rounded-lg shadow-sm">
-            <div className="space-y-3">
-              <Textarea
-                placeholder="Write your message here..."
-                className="min-h-20 resize-none"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-              />
-              <div className="flex justify-between gap-2">
-                <Button size="sm" variant="outline" className="gap-2 bg-transparent">
-                  <Clock className="h-4 w-4" />
-                  Schedule
-                </Button>
-                <Button size="sm" className="gap-2">
-                  <Send className="h-4 w-4" />
-                  Send
-                </Button>
-              </div>
-            </div>
-          </Card> */}
                     <Card className="m-4 p-4 border rounded-lg shadow-sm">
                         <div className="space-y-3">
                             <Textarea
@@ -360,10 +395,54 @@ export default function InboxPage() {
                                 disabled={isSending} // --- NEW
                             />
                             <div className="flex justify-between gap-2">
-                                <Button size="sm" variant="outline" className="gap-2 bg-transparent">
-                                    <Clock className="h-4 w-4" />
-                                    Schedule
-                                </Button>
+
+                                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="gap-2 bg-transparent"
+                                        >
+                                            <Clock className="h-4 w-4" />
+                                            {/* Show the selected date, or "Schedule" */}
+                                            {scheduledAt ? (
+                                                format(scheduledAt, "MMM d, p")
+                                            ) : (
+                                                "Schedule"
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={scheduledAt || undefined}
+                                            onSelect={(newDate) => {
+                                                if (newDate) {
+                                                    const [hours, minutes] = time.split(":").map(Number);
+                                                    const combinedDateTime = new Date(newDate);
+                                                    combinedDateTime.setHours(hours, minutes);
+                                                    setScheduledAt(combinedDateTime);
+                                                } else {
+                                                    setScheduledAt(null);
+                                                }
+                                                setIsPopoverOpen(false); // Close popover on select
+                                            }}
+                                            disabled={(date) => date < new Date(Date.now() - 86400000)} // Disable past dates
+                                            initialFocus
+                                        />
+                                        <div className="p-2 border-t border-border">
+                                            <Label htmlFor="time" className="text-sm font-medium">Time</Label>
+                                            <Input
+                                                id="time"
+                                                type="time"
+                                                value={time}
+                                                onChange={(e) => setTime(e.target.value)}
+                                            />
+                                        </div>
+                                        {/* Optional: Add a Time Picker component here */}
+                                    </PopoverContent>
+                                </Popover>
+
                                 <Button
                                     size="sm"
                                     className="gap-2"
