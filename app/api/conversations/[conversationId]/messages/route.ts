@@ -1,15 +1,16 @@
-// app/api/conversations/[conversationId]/messages/route.ts
-
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
 export async function GET(
-    req: Request,
-    { params }: { params: { conversationId: string } }
+    req: NextRequest,
+    { params }: { params: Promise<{ conversationId: string }> }
 ) {
     try {
+
+        const { conversationId } = await params;
+
         // 1. Authenticate the user
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user?.id) {
@@ -25,7 +26,7 @@ export async function GET(
         // 3. Fetch all messages for the selected conversation
         const messages = await prisma.message.findMany({
             where: {
-                conversationId: (await params).conversationId,
+                conversationId: conversationId,
                 // SECURITY CHECK: Ensure this conversation belongs to the user's team
                 conversation: {
                     teamId: user.teamId,
