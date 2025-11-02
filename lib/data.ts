@@ -24,7 +24,7 @@ export const SAMPLE_CONTACTS: Contact[] = [
   {
     id: 1,
     name: "Jane Doe",
-    phone: "+1 (555) 123-4567",
+    phone: "+919262348758",
     email: "jane.doe@example.com",
     initials: "JD",
     channel: "SMS",
