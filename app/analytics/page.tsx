@@ -20,6 +20,8 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { authClient } from "@/lib/auth-client"
+import { useRouter } from "next/navigation"
 
 export default function Analytics() {
   const [activeNav, setActiveNav] = useState("analytics")
@@ -79,6 +81,21 @@ export default function Analytics() {
       color: "bg-purple-500/10 text-purple-600",
     },
   ]
+
+  const router = useRouter();
+  const {
+      data: session,
+      isPending, //loading state
+      error, //error object
+      refetch //refetch the session
+    } = authClient.useSession()
+    console.log("Session data:", session);
+  
+    if (isPending) return <div>Loading...</div>;
+    if (!session?.user) {
+      router.push("/login");
+      return null;
+    }
 
   return (
     <div className="min-h-screen bg-background">

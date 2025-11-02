@@ -1,17 +1,18 @@
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") 
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id    String @id @default(cuid())
-  email String @unique
+  id    String  @id @default(cuid())
+  email String  @unique
   name  String?
-  role  Role   @default(VIEWER) // For role-based access
+  role  Role    @default(VIEWER) // For role-based access
 
   // Relation to a Team
   teamId String?
@@ -22,78 +23,84 @@ model User {
   // sessions Session[]
 
   // Data this user has created
-  sentMessages   Message[] 
-  createdNotes   Note[]   
-  assignedConvos Conversation[] 
+  sentMessages   Message[]
+  createdNotes   Note[]
+  assignedConvos Conversation[]
+  emailVerified  Boolean        @default(false)
+  image          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now()) @updatedAt
+  sessions       Session[]
+  accounts       Account[]
 
   @@index([teamId])
+  @@map("user")
 }
 
 model Team {
-  id   String @id @default(cuid())
-  name String
-  users User[]
+  id            String         @id @default(cuid())
+  name          String
+  users         User[]
   contacts      Contact[]
   conversations Conversation[]
 }
 
 model Contact {
-  id            String  @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
   phone         String?
-  email         String? 
-  socialHandles Json?   
-  teamId String
-  team   Team   @relation(fields: [teamId], references: [id])
-  conversation Conversation?
-  notes Note[]
+  email         String?
+  socialHandles Json?
+  teamId        String
+  team          Team          @relation(fields: [teamId], references: [id])
+  conversation  Conversation?
+  notes         Note[]
 
-  @@unique([teamId, phone]) 
+  @@unique([teamId, phone])
   @@index([teamId])
 }
 
 model Conversation {
-  id     String             @id @default(cuid())
-  status ConversationStatus @default(OPEN)
-  contactId String  @unique 
-  contact   Contact @relation(fields: [contactId], references: [id])
-  teamId String
-  team   Team   @relation(fields: [teamId], references: [id])
+  id         String             @id @default(cuid())
+  status     ConversationStatus @default(OPEN)
+  contactId  String             @unique
+  contact    Contact            @relation(fields: [contactId], references: [id])
+  teamId     String
+  team       Team               @relation(fields: [teamId], references: [id])
   assigneeId String?
-  assignee   User?   @relation(fields: [assigneeId], references: [id])
-  messages Message[]
+  assignee   User?              @relation(fields: [assigneeId], references: [id])
+  messages   Message[]
 
   @@index([teamId])
   @@index([assigneeId])
 }
 
 model Message {
-  id      String @id @default(cuid())
-  content String
+  id             String           @id @default(cuid())
+  content        String
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  channel Channel
-  direction MessageDirection
-  status MessageStatus @default(SENT)
-  authorId String?
-  author   User?   @relation(fields: [authorId], references: [id])
-  createdAt   DateTime  @default(now())
-  scheduledAt DateTime? 
-  externalSid String? @unique
-  attachments Json?
+  conversation   Conversation     @relation(fields: [conversationId], references: [id])
+  channel        Channel
+  direction      MessageDirection
+  status         MessageStatus    @default(SENT)
+  authorId       String?
+  author         User?            @relation(fields: [authorId], references: [id])
+  createdAt      DateTime         @default(now())
+  scheduledAt    DateTime?
+  externalSid    String?          @unique
+  attachments    Json?
 
   @@index([conversationId])
-  @@index([status, scheduledAt]) 
+  @@index([status, scheduledAt])
 }
 
-
 model Note {
-  id      String @id @default(cuid())
-  content String
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id])
-  contactId String
-  contact   Contact @relation(fields: [contactId], references: [id])
+  id         String         @id @default(cuid())
+  content    String
+  authorId   String
+  author     User           @relation(fields: [authorId], references: [id])
+  contactId  String
+  contact    Contact        @relation(fields: [contactId], references: [id])
   visibility NoteVisibility @default(TEAM)
 
   createdAt DateTime @default(now())
@@ -103,9 +110,9 @@ model Note {
 }
 
 enum Role {
-  ADMIN  
-  EDITOR 
-  VIEWER 
+  ADMIN
+  EDITOR
+  VIEWER
 }
 
 enum Channel {
@@ -122,11 +129,11 @@ enum MessageDirection {
 }
 
 enum MessageStatus {
-  QUEUED  
-  SENT      
-  DELIVERED 
-  READ   
-  FAILED    
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
 }
 
 enum ConversationStatus {
@@ -136,6 +143,51 @@ enum ConversationStatus {
 }
 
 enum NoteVisibility {
-  TEAM    
-  PRIVATE 
+  TEAM
+  PRIVATE
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
 }

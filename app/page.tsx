@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { authClient } from "@/lib/auth-client"
+import { useRouter } from "next/navigation";
 
 const conversations = [
   {
@@ -67,10 +69,25 @@ export default function InboxPage() {
   const [messageInput, setMessageInput] = useState("")
   const [notes, setNotes] = useState("")
   const [isPrivateNote, setIsPrivateNote] = useState(false)
+  const router = useRouter();
 
   const filteredConversations = conversations.filter(
     (conv) => conv.name.toLowerCase().includes(searchTerm.toLowerCase()) || conv.phone.includes(searchTerm),
   )
+
+  const {
+    data: session,
+    isPending, //loading state
+    error, //error object
+    refetch //refetch the session
+  } = authClient.useSession()
+  console.log("Session data:", session);
+
+  if (isPending) return <div>Loading...</div>;
+  if (!session?.user) {
+    router.push("/login");
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -109,9 +126,8 @@ export default function InboxPage() {
               <div
                 key={conv.id}
                 onClick={() => setSelectedConversation(conv)}
-                className={`p-4 border-b cursor-pointer transition-colors ${
-                  selectedConversation.id === conv.id ? "bg-secondary" : "hover:bg-muted"
-                }`}
+                className={`p-4 border-b cursor-pointer transition-colors ${selectedConversation.id === conv.id ? "bg-secondary" : "hover:bg-muted"
+                  }`}
               >
                 <div className="flex gap-3">
                   <Avatar className="h-10 w-10">
@@ -152,9 +168,8 @@ export default function InboxPage() {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.isOutbound ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-xs px-4 py-2 rounded-lg ${
-                    msg.isOutbound ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}
+                  className={`max-w-xs px-4 py-2 rounded-lg ${msg.isOutbound ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                    }`}
                 >
                   <p className="text-sm">{msg.text}</p>
                   <p className="text-xs mt-1 opacity-70">{msg.time}</p>
