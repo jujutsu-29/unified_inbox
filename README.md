@@ -4,16 +4,13 @@
 
 # Unified Inbox - 
 
-This is a full-stack, real-time, multi-team communication platform built for the Attack Capital assignment. It serves as a unified inbox that aggregates SMS messages (via Twilio) into a single, collaborative dashboard.
+This is a full-stack, real-time, multi-team communication platform. It serves as a unified inbox that aggregates SMS messages (via Twilio) into a single, collaborative dashboard.
 
 The application allows users to send, receive, and schedule messages, add internal team notes, view live cursors of other team members, and monitor key analytics.
 
 ## 🎥 Video Walkthrough
 
-*[Link to your 3-5 minute Loom or unlisted YouTube video here. This is a critical deliverable.]*
-
-**Example:**
-`[https://www.loom.com/share/your-video-link]`
+*[https://drive.google.com/file/d/1ERJapg0de13sL6kxnisaazc1xXgEeZ4u/view?usp=drive_link]*
 
 -----
 
@@ -148,6 +145,8 @@ erDiagram
     Contact ||--|{ Note : "has"
 
     Conversation ||--|{ Message : "contains"
+```
+
 ## 📊 Integration Comparison Table
 
 This project integrated two primary external services, each with distinct characteristics.
@@ -172,8 +171,7 @@ This project integrated two primary external services, each with distinct charac
 ### 1\. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/jujutsu-29/unified_inbox
 npm install
 ```
 
