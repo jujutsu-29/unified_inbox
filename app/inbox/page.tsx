@@ -738,6 +738,7 @@ import { ClientSideSuspense } from "@liveblocks/react";
 import { createNote } from "../actions/create-note";
 import { LiveCursors } from "@/components/LiveCursor";
 import { Navbar } from "@/components/Navbar";
+import Loading from "@/components/loading";
 
 /**
  * =======================================================
@@ -1382,7 +1383,7 @@ export default function InboxPage() {
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
-    return <div className="flex h-screen items-center justify-center">Loading session...</div>;
+    return <div className="flex h-screen items-center justify-center"><Loading/></div>;
   }
   
   if (!session?.user) {

@@ -11,10 +11,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePathname } from "next/navigation";
 
 export function Navbar() {
     const { data: session, isPending } = authClient.useSession();
     const { signOut } = authClient;
+
+    const pathname = usePathname();
 
     if (isPending) {
         return null;
@@ -26,10 +29,33 @@ export function Navbar() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Communications</h1>
                     <nav className="flex gap-6 mt-4 text-sm">
-                        <a href="/inbox" className="text-primary font-medium">
+                        {/* <a href="/inbox" className="text-primary font-medium">
                             Inbox
                         </a>
                         <a href="/analytics" className="text-muted-foreground hover:text-foreground">
+                            Analytics
+                        </a> */}
+                        <a
+                            href="/inbox"
+                            className={
+                                // If the path is /inbox, use "active" styles
+                                pathname === "/inbox"
+                                    ? "text-primary font-medium"
+                                    : "text-muted-foreground hover:text-foreground"
+                            }
+                        >
+                            Inbox
+                        </a>
+
+                        <a
+                            href="/analytics"
+                            className={
+                                // If the path is /analytics, use "active" styles
+                                pathname === "/analytics"
+                                    ? "text-primary font-medium"
+                                    : "text-muted-foreground hover:text-foreground"
+                            }
+                        >
                             Analytics
                         </a>
                     </nav>

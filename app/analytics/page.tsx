@@ -22,6 +22,8 @@ import {
 } from "recharts"
 import { authClient } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
+import Loading from "@/components/loading"
+import { Navbar } from "@/components/Navbar"
 
 interface AnalyticsData {
   kpis: {
@@ -40,61 +42,6 @@ export default function Analytics() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData | null>(null);
-
-  // const messageData = [
-  //   { day: "Mon", sent: 120, received: 80, replied: 65 },
-  //   { day: "Tue", sent: 150, received: 95, replied: 78 },
-  //   { day: "Wed", sent: 130, received: 85, replied: 72 },
-  //   { day: "Thu", sent: 180, received: 110, replied: 92 },
-  //   { day: "Fri", sent: 160, received: 100, replied: 85 },
-  //   { day: "Sat", sent: 90, received: 60, replied: 48 },
-  //   { day: "Sun", sent: 70, received: 50, replied: 35 },
-  // ]
-
-  // const channelData = [
-  //   { name: "SMS", value: 45, color: "#3B82F6" },
-  //   { name: "WhatsApp", value: 35, color: "#10B981" },
-  //   { name: "Email", value: 15, color: "#8B5CF6" },
-  //   { name: "Voice", value: 5, color: "#F59E0B" },
-  // ]
-
-  // const topContacts = [
-  //   { id: 1, name: "Jane Doe", messages: 124, lastSeen: "2 min ago" },
-  //   { id: 2, name: "John Smith", messages: 98, lastSeen: "15 min ago" },
-  //   { id: 3, name: "Sarah Wilson", messages: 87, lastSeen: "1 hour ago" },
-  //   { id: 4, name: "Mike Brown", messages: 76, lastSeen: "3 hours ago" },
-  // ]
-
-  // const metrics = [
-  //   {
-  //     label: "Total Messages",
-  //     value: "1,245",
-  //     trend: "+12%",
-  //     icon: MessageSquare,
-  //     color: "bg-blue-500/10 text-blue-600",
-  //   },
-  //   {
-  //     label: "Active Contacts",
-  //     value: "48",
-  //     trend: "+5%",
-  //     icon: Users,
-  //     color: "bg-green-500/10 text-green-600",
-  //   },
-  //   {
-  //     label: "Avg Response",
-  //     value: "2.3min",
-  //     trend: "-8%",
-  //     icon: Clock,
-  //     color: "bg-orange-500/10 text-orange-600",
-  //   },
-  //   {
-  //     label: "Satisfaction",
-  //     value: "94%",
-  //     trend: "+3%",
-  //     icon: TrendingUp,
-  //     color: "bg-purple-500/10 text-purple-600",
-  //   },
-  // ]
 
   const router = useRouter();
   const {
@@ -123,14 +70,14 @@ export default function Analytics() {
     }
   }, [session, dateRange]);
 
-  if (isPending) return <div>Loading...</div>;
+  if (isPending) return <div><Loading/></div>;
   if (!session?.user) {
     router.push("/login");
     return null;
   }
 
   if (isLoading) {
-    return <div>Loading dashboard...</div>;
+    return <div><Loading/></div>;
   }
   
   // --- If no data, show empty state ---
@@ -140,7 +87,7 @@ export default function Analytics() {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="border-b border-border bg-card sticky top-0">
+      {/* <nav className="border-b border-border bg-card sticky top-0">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-primary">Communications</h1>
@@ -168,7 +115,9 @@ export default function Analytics() {
             </Link>
           </div>
         </div>
-      </nav>
+      </nav> */}
+
+      <Navbar/>
 
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -186,26 +135,6 @@ export default function Analytics() {
             ))}
           </div>
         </div>
-
-        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metrics.map((metric) => {
-            const Icon = metric.icon
-            return (
-              <Card key={metric.label} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{metric.label}</p>
-                    <p className="text-2xl font-bold text-foreground mt-1">{metric.value}</p>
-                    <p className="text-xs text-green-600 mt-1">{metric.trend} from last period</p>
-                  </div>
-                  <div className={`p-2 rounded-lg ${metric.color}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
-        </div> */}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 p-6">
@@ -256,26 +185,6 @@ export default function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* <Card className="lg:col-span-2 p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Response Time by Hour</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={data.messageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="day" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "0.5rem",
-                  }}
-                  labelStyle={{ color: "var(--color-foreground)" }}
-                />
-                <Bar dataKey="replied" fill="var(--color-accent)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card> */}
-
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">Top Contacts</h3>
             <div className="space-y-4">
