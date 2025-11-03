@@ -33,8 +33,6 @@ export async function GET() {
     const totalContacts = await prisma.contact.count({
       where: { teamId: teamId },
     });
-    // Avg. Response Time and Satisfaction are complex/not in schema,
-    // so we'll just send the main two.
 
     // --- 3. Calculate "Messages Over Time" (Line Chart) ---
     const messages = await prisma.message.findMany({
@@ -94,7 +92,6 @@ export async function GET() {
       id: c.contactId,
       name: c.contact.name || "Unknown",
       messages: c._count.messages,
-      lastSeen: "n/a", // This metric is not tracked
     }));
 
     // --- 6. Send all data back to the client ---

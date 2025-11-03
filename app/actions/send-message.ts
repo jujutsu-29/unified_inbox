@@ -12,21 +12,29 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 const client = new Twilio(accountSid, authToken);
 
+/**
+ * Zod schema for validating new contact form data.
+ */
 const messageSchema = z.object({
     body: z.string().min(1, "Message cannot be empty"),
     contactPhone: z.string(),
     conversationId: z.string(),
 });
 
-// const session = await auth.api.getSession({
-//     headers: await headers()
-// })
-// if (!session?.user) {
-//     throw new Error("Unauthorized");
-// }
-
-// const authorId = session.user.id;
-
+/**
+ * Server Action to send an SMS message immediately via Twilio.
+ *
+ * This function performs the following steps:
+ * 1. Authenticates the user and performs an RBAC check.
+ * 2. Validates the incoming form data.
+ * 3. Calls the Twilio API to send the SMS.
+ * 4. If successful, creates a new `Message` in the local database with `status: 'SENT'`.
+ * 5. Revalidates the `/inbox` path to update the UI.
+ *
+ * @param formData The FormData object from the client, expecting `body`, `contactPhone`, and `conversationId`.
+ * @returns A promise resolving to an object with `success: true` and the `messageSid`,
+ * or `success: false` with an error message.
+ */
 export async function sendMessage(formData: FormData) {
     try {
 

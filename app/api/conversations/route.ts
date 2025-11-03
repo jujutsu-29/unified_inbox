@@ -1,8 +1,6 @@
-// app/api/conversations/route.ts
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth"; // Your Better Auth config
+import { auth } from "@/lib/auth";  
 import { headers } from "next/headers";
 
 export async function GET() {
@@ -13,8 +11,7 @@ export async function GET() {
       return new NextResponse("Not authenticated", { status: 401 });
     }
 
-    // 2. Find the user's teamId
-    // (This uses the "auto-create team" logic)
+    // 2. Find the user's teamId 
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!user?.teamId) {
       // If user has no team, they have no conversations
@@ -33,10 +30,6 @@ export async function GET() {
           take: 1,
         },
       },
-      orderBy: {
-        // Optional: sort conversations by most recent message
-        // This is a bit more complex and might require sorting on the client
-      },
     });
 
     // 4. Format the data to match your UI's needs
@@ -49,10 +42,10 @@ export async function GET() {
         email: convo.contact.email,
         avatar: convo.contact.name?.charAt(0).toUpperCase() || "C",
         channel: lastMessage?.channel || "SMS", // Default to SMS
-        channelColor: "bg-green-100 text-green-800", // TODO: make dynamic
+        channelColor: "bg-green-100 text-green-800",  
         lastMessage: lastMessage?.content || "No messages yet",
         timestamp: lastMessage?.createdAt.toLocaleTimeString() || "",
-        contactId: convo.contact.id, // --- IMPORTANT for fetching history/notes
+        contactId: convo.contact.id, 
       };
     });
 

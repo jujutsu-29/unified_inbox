@@ -6,13 +6,29 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-// Schema to validate the form
+/**
+ * Zod schema for validating new contact form data.
+ */
 const scheduleSchema = z.object({
     body: z.string().min(1, "Message cannot be empty"),
     conversationId: z.string(),
     scheduledAt: z.coerce.date(), // 'coerce' will convert the string from FormData into a Date
 });
 
+/**
+ * Server Action to save a message to be sent in the future.
+ *
+ * This function does NOT send a message. It simply:
+ * 1. Authenticates the user and performs an RBAC check.
+ * 2. Validates the form data.
+ * 3. Creates a new `Message` in the database with `status: 'QUEUED'`.
+ * 4. The message will be processed later by the `/api/cron/send-scheduled` route.
+ * 5. Revalidates the `/inbox` path to show the optimistically-updated UI.
+ *
+ * @param formData The FormData object from the client, expecting `body`, `conversationId`,
+ * and an ISO date string for `scheduledAt`.
+ * @returns A promise resolving to an object with `success: true` or `success: false` with an error message.
+ */
 export async function scheduleMessage(formData: FormData) {
     try {
         console.log("Scheduling message...");

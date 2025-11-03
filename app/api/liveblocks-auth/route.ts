@@ -1,5 +1,3 @@
-// app/api/liveblocks-auth/route.ts
-
 import { NextResponse } from "next/server";
 import { Liveblocks } from "@liveblocks/node";
 import { auth } from "@/lib/auth";  
@@ -18,8 +16,7 @@ export async function POST(request: Request) {
     if (!sessionUser?.user?.id) {
       return new NextResponse("Not authenticated", { status: 401 });
     }
-
-    // 2. Get the user's info from your database
+ 
     const user = await prisma.user.findUnique({
       where: { id: sessionUser.user.id },
       select: { id: true, name: true, email: true, teamId: true },

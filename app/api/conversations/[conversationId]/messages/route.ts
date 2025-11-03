@@ -27,7 +27,6 @@ export async function GET(
         const messages = await prisma.message.findMany({
             where: {
                 conversationId: conversationId,
-                // SECURITY CHECK: Ensure this conversation belongs to the user's team
                 conversation: {
                     teamId: user.teamId,
                 },
