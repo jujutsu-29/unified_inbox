@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { RoomProvider, useBroadcastEvent, useEventListener, ClientSideSuspense } from "@liveblocks/react";
+import { RoomProvider, useEventListener } from "@liveblocks/react";
+import { createNote } from "../actions/create-note";
 
 // const conversations = [
 //     {
@@ -88,8 +89,11 @@ const events = [
 function InboxComponent() {
     const [searchTerm, setSearchTerm] = useState("")
     const [messageInput, setMessageInput] = useState("")
-    const [notes, setNotes] = useState("")
+    const [noteInput, setNoteInput] = useState("")
     const [isPrivateNote, setIsPrivateNote] = useState(false)
+    const [isSavingNote, setIsSavingNote] = useState(false);
+    const [notesList, setNotesList] = useState<any[]>([]);
+    const [isLoadingNotes, setIsLoadingNotes] = useState(false);
     const router = useRouter();
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [conversations, setConversations] = useState<any[]>([]);
@@ -109,6 +113,29 @@ function InboxComponent() {
         error,
         refetch
     } = authClient.useSession();
+
+    useEffect(() => {
+        const fetchNotes = async () => {
+            if (!selectedConversation) return;
+
+            setIsLoadingNotes(true);
+            try {
+                // We need the contactId from the conversation object
+                const res = await fetch(
+                    `/api/contacts/${selectedConversation.contactId}/notes`
+                );
+                if (!res.ok) throw new Error("Failed to fetch notes");
+                const data = await res.json();
+                setNotesList(data);
+            } catch (err) {
+                console.error(err);
+            }
+            setIsLoadingNotes(false);
+        };
+
+        fetchNotes();
+    }, [selectedConversation, refetchToggle]);
+
 
     useEffect(() => {
         // This is an async function inside the hook
@@ -132,12 +159,11 @@ function InboxComponent() {
         if (session?.user) { // Only fetch if logged in
             fetchConversations();
         }
-    }, [session, refetchToggle]); // --- Refetches if auth changes or if we toggle it
+    }, [session, refetchToggle]);
 
-    // --- NEW: Fetch messages when a conversation is selected ---
     useEffect(() => {
         const fetchMessages = async () => {
-            if (!selectedConversation) return; // Don't fetch if nothing is selected
+            if (!selectedConversation) return;
 
             setIsLoadingMessages(true);
             try {
@@ -145,7 +171,6 @@ function InboxComponent() {
                     `/api/conversations/${selectedConversation.id}/messages`
                 );
                 const data = await res.json();
-                // console.log("Fetched messages for conversation", selectedConversation.id, data);
                 setMessages(data);
             } catch (err) {
                 console.error("Failed to fetch messages:", err);
@@ -161,6 +186,35 @@ function InboxComponent() {
         router.push("/login");
         return null;
     }
+
+    const handleSaveNote = async (e: React.FormEvent<HTMLFormElement>) => {
+        console.log("Handle save note called");
+        e.preventDefault();
+        if (!noteInput || !selectedConversation) return;
+
+        setIsSavingNote(true);
+
+        const formData = new FormData();
+        formData.append("content", noteInput);
+        formData.append("contactId", selectedConversation.contactId);
+        formData.append("visibility", isPrivateNote ? 'PRIVATE' : 'TEAM');
+
+        try {
+            const result = await createNote(formData);
+            console.log("Create note result:", result);
+            if (result.success) {
+                setNoteInput(""); // Clear input
+                setIsPrivateNote(false); // Reset toggle
+                setRefetchToggle(prev => !prev); // Refetch notes
+            } else {
+                console.error("Failed to save note:", result.error);
+                // TODO: Show error toast
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        setIsSavingNote(false);
+    };
 
     const isViewer = session.user.role === 'VIEWER';
 
@@ -520,11 +574,62 @@ function InboxComponent() {
 
                                 {/* Notes Tab */}
                                 <TabsContent value="notes" className="space-y-3 mt-4">
-                                    <Textarea
+
+                                    <form onSubmit={handleSaveNote} className="space-y-3">
+                                        <Textarea
+                                            placeholder="Add notes about this contact..."
+                                            className="min-h-24 resize-none"
+                                            value={noteInput} // <-- Use new state
+                                            onChange={(e) => setNoteInput(e.target.value)} // <-- Use new state
+                                            disabled={isViewer || isSavingNote}
+                                        />
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="private"
+                                                checked={isPrivateNote}
+                                                onChange={(e) => setIsPrivateNote(e.target.checked)}
+                                                disabled={isViewer || isSavingNote}
+                                                className="w-4 h-4"
+                                            />
+                                            <label htmlFor="private" className="text-xs text-muted-foreground">
+                                                Private Note
+                                            </label>
+                                        </div>
+                                        {!isViewer && (
+                                            <Button
+                                                type="submit"
+                                                size="sm"
+                                                className="w-full"
+                                                disabled={isSavingNote || !noteInput}
+                                            >
+                                                {isSavingNote ? "Saving..." : "Save Note"}
+                                            </Button>
+                                        )}
+                                    </form>
+
+                                    <div className="pt-4 space-y-4">
+                                        {isLoadingNotes ? (
+                                            <p className="text-xs text-muted-foreground">Loading notes...</p>
+                                        ) : (
+                                            notesList.map((note) => (
+                                                <div key={note.id} className="pb-3 border-b last:border-b-0">
+                                                    <p className="text-sm text-foreground">{note.content}</p>
+                                                    <p className="text-xs text-muted-foreground mt-2">
+                                                        by {note.author.name || note.author.email} on {format(new Date(note.createdAt), "MMM d, yyyy")}
+                                                        {note.visibility === 'PRIVATE' && (
+                                                            <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs">Private</span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                    {/* <Textarea
                                         placeholder="Add notes about this contact..."
                                         className="min-h-24 resize-none"
-                                        value={notes}
-                                        onChange={(e) => setNotes(e.target.value)}
+                                        value={notesList}
+                                        onChange={(e) => setNotesList(e.target.value)}
                                     />
                                     <div className="flex items-center gap-2">
                                         <input
@@ -540,7 +645,7 @@ function InboxComponent() {
                                     </div>
                                     <Button size="sm" className="w-full">
                                         Save Note
-                                    </Button>
+                                    </Button> */}
                                 </TabsContent>
                             </Tabs>
                         </div>
