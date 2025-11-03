@@ -29,6 +29,14 @@ export async function GET(
         contact: {
           teamId: user.teamId,
         },
+
+        OR: [
+          { visibility: 'TEAM' }, // Show all 'TEAM' notes
+          {
+            visibility: 'PRIVATE',
+            authorId: user.id, // OR, show 'PRIVATE' notes *only if* I am the author
+          },
+        ],
       },
       include: {
         author: {

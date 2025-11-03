@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { authClient } from "@/lib/auth-client"
 import { useRouter } from "next/navigation";
+import { Navbar } from "@/components/Navbar"
 
 const conversations = [
   {
@@ -92,7 +93,7 @@ export default function InboxPage() {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header Navigation */}
-      <header className="border-b bg-card px-6 py-4">
+      {/* <header className="border-b bg-card px-6 py-4">
         <div className="max-w-[1600px] mx-auto">
           <h1 className="text-2xl font-bold text-foreground">Communications</h1>
           <nav className="flex gap-6 mt-4 text-sm">
@@ -104,8 +105,9 @@ export default function InboxPage() {
             </a>
           </nav>
         </div>
-      </header>
+      </header> */}
 
+      <Navbar/>
       {/* Main 3-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Conversation List */}
