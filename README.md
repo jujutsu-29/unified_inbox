@@ -81,7 +81,73 @@ This project's architecture was designed for scalability, security, and a modern
 6.  **State Management:** The app avoids complex client-side state libraries. It relies on **Server Actions** for mutations and a simple `refetchToggle` (triggered by Liveblocks events) to re-fetch data, keeping the server as the single source of truth.
 
 -----
+## 🗂️ Database Schema (ERD)
 
+Here is the Entity-Relationship Diagram for the application, built with Prisma.
+
+```mermaid
+erDiagram
+    User {
+        string id
+        string email
+        string name
+        Role role
+        string teamId
+    }
+
+    Team {
+        string id
+        string name
+    }
+
+    Contact {
+        string id
+        string name
+        string phone
+        string email
+        string teamId
+    }
+
+    Conversation {
+        string id
+        ConversationStatus status
+        string contactId
+        string teamId
+        string assigneeId
+    }
+
+    Message {
+        string id
+        string content
+        string conversationId
+        Channel channel
+        MessageDirection direction
+        MessageStatus status
+        string authorId
+        datetime scheduledAt
+    }
+
+    Note {
+        string id
+        string content
+        string authorId
+        string contactId
+        NoteVisibility visibility
+    }
+
+    User ||--o{ Team : "belongs to"
+    User ||--o{ Message : "authors"
+    User ||--o{ Note : "authors"
+    User ||--o{ Conversation : "assignee"
+
+    Team ||--|{ User : "has members"
+    Team ||--|{ Contact : "owns"
+    Team ||--|{ Conversation : "owns"
+
+    Contact }|--|| Conversation : "has one"
+    Contact ||--|{ Note : "has"
+
+    Conversation ||--|{ Message : "contains"
 ## 📊 Integration Comparison Table
 
 This project integrated two primary external services, each with distinct characteristics.
